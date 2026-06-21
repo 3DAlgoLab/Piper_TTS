@@ -593,16 +593,22 @@ export function activate(context: vscode.ExtensionContext): PiperTTSApi {
     context.subscriptions.push(selectVoiceDisposable);
 
     const readAloudDisposable = vscode.commands.registerCommand('piper-tts.readAloud', async () => {
+        let text: string | undefined;
+
+        // Try editor selection first
         const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
+        if (editor) {
+            text = editor.document.getText(editor.selection);
         }
 
-        const selection = editor.selection;
-        const text = editor.document.getText(selection);
+        // Fallback: copy terminal selection, then read clipboard
+        if (!text?.trim()) {
+            await vscode.commands.executeCommand('workbench.action.terminal.copySelection');
+            text = await vscode.env.clipboard.readText();
+        }
 
-        if (!text) {
-            vscode.window.showInformationMessage('Please select some text to read aloud');
+        if (!text?.trim()) {
+            vscode.window.showInformationMessage('Please select some text to read aloud (copy terminal text first)');
             return;
         }
 
